@@ -1,0 +1,22 @@
+{
+    "name": "asayhome/asay-helpers",
+    "autoload": {
+        "psr-4": {
+            "AsayHome\\AsayHelpers\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Abdelrahman Saeed Elhassan",
+            "email": "abdosaeedelhassan@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "AsayHome\\AsayHelpers\\AsayHelpersProvider"
+            ]
+        }
+    },
+    "require": {}
+}
