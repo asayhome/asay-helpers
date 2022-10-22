@@ -1,9 +1,9 @@
 <?php
 
 
-namespace Infty\Helpers\Helpers;
+namespace AsayHome\AsayHelpers\Helpers;
 
-use Infty\Helpers\Models\PaymentsOperations;
+use AsayHome\AsayHelpers\Models\AsayPaymentsOperations;
 
 class PaymentsHelper
 {
@@ -106,14 +106,14 @@ class PaymentsHelper
             'created_by' => $created_by,
             'timestamp' => date('Y-m-d H:i:s', time()),
         ]);
-        PaymentsOperations::create([
+        AsayPaymentsOperations::create([
             'user_id' => $user_id,
             'created_by' => $created_by,
             'order_id' => null,
             'operation' => $operation,
             'operation_id' => $operation_id,
-            'type' => PaymentsHelper::$deposit_type,
-            'reason' => PaymentsHelper::$wallet_deposit_reason,
+            'type' => self::$deposit_type,
+            'reason' => self::$wallet_deposit_reason,
             'amount' => $amount,
             'reference' => $payment_reference,
             'gateway' => $gateway,
@@ -135,299 +135,443 @@ class PaymentsHelper
         $details
     ) {
         // (1): important: register the payment firstly
-        PaymentsOperations::create([
-            'user_id' => $user_id,
-            'created_by' => $created_by,
-            'order_id' => $offer->order_id,
-            'operation' => $operation,
-            'type' => PaymentsHelper::$deposit_type,
-            'reason' => PaymentsHelper::$accepting_offer_reason,
-            'amount' => $amount,
-            'reference' => $payment_reference,
-            'gateway' => $gateway,
-            'operation_id' => $operation_id,
-            'details' => is_array($details) ? json_encode($details) : $details,
-            'status' => $payment_status,
-        ]);
-        // (2): do accept offer secondly
-        OffersHelper::acceptOffer($offer, $amount, $gateway);
+        // AsayPaymentsOperations::create([
+        //     'user_id' => $user_id,
+        //     'created_by' => $created_by,
+        //     'order_id' => $offer->order_id,
+        //     'operation' => $operation,
+        //     'type' => self::$deposit_type,
+        //     'reason' => self::$accepting_offer_reason,
+        //     'amount' => $amount,
+        //     'reference' => $payment_reference,
+        //     'gateway' => $gateway,
+        //     'operation_id' => $operation_id,
+        //     'details' => is_array($details) ? json_encode($details) : $details,
+        //     'status' => $payment_status,
+        // ]);
+        // // (2): do accept offer secondly
+        // OffersHelper::acceptOffer($offer, $amount, $gateway);
     }
 
-    public static function doSecurityDepositOperation(
-        $user,
-        $amount,
-        $gateway,
-        $created_by,
-        $operation,
-        $operation_id,
-        $payment_reference,
-        $payment_status,
-        $details
-    ) {
-        $security_deposit = $amount;
-        if ($user->security_deposit) {
-            $security_deposit += $user->security_deposit;
+
+
+    public static function getReceivableAmount($user)
+    {
+        // $orders = self::getOrders($user, 'ignore', null, false, 'ignore');
+        $receivable_amount = 0;
+        // foreach ($orders->cursor() as $order) {
+        //     if ($user->isExaminer()) {
+        //         $receivable_amount += floatval(OffersHelper::getAcceptingOfferDetails($order->offer)['examiner_app_amount']['examiner_amount']);
+        //     } else if ($user->isMarketer()) {
+        //         $receivable_amount += round(floatval(OffersHelper::getAcceptingOfferDetails($order->offer)['examiner_app_amount']['application_amount']) * ($order->marketer_percentage / 100));
+        //     }
+        // }
+        return $receivable_amount;
+    }
+
+
+    public static function getOrders($user, $paid = 0, $receivable = null, $isArray = false, $hasTicket = false)
+    {
+
+        $ids = [];
+        $is_paid_filed = 'is_paid';
+        $user_field = 'examined_by';
+        if ($user && @!$isArray && $user->isMarketer()) {
+            $is_paid_filed = 'marketer_is_paid';
+            $user_field = 'marketed_by';
+        } else if (($receivable && $receivable->type == 'marketers')) {
+            $is_paid_filed = 'marketer_is_paid';
+            $user_field = 'marketed_by';
         }
-        $user->security_deposit = $security_deposit;
-        $user->save();
-        PaymentsOperations::create([
-            'user_id' => $user->id,
-            'created_by' => $created_by,
-            'order_id' => null,
-            'operation' => $operation,
-            'type' => PaymentsHelper::$deposit_type,
-            'reason' => PaymentsHelper::$security_deposit_reason,
-            'amount' => $amount,
-            'reference' => $payment_reference,
-            'gateway' => $gateway,
-            'operation_id' => $operation_id,
-            'details' => is_array($details) ? json_encode($details) : $details,
-            'status' => $payment_status,
-        ]);
-    }
-
-    public static function doRescheduleFeesOperation(
-        $order,
-        $created_by,
-        $amount,
-        $gateway,
-        $operation,
-        $operation_id,
-        $payment_reference,
-        $payment_status,
-        $details
-
-    ): object {
-
-        $total_fees = OrdersHelper::addRescheduleFee($order, $amount, $gateway);
-        PaymentsOperations::create([
-            'user_id' => $order->created_by,
-            'created_by' => $created_by,
-            'order_id' => $order->id,
-            'operation' => $operation,
-            'type' => PaymentsHelper::$deposit_type,
-            'reason' => PaymentsHelper::$reschedule_fees_reason,
-            'amount' => $amount,
-            'gateway' => $gateway,
-            'operation_id' => $operation_id,
-            'reference' => $payment_reference,
-            'details' => is_array($details) ? json_encode($details) : $details,
-            'status' => $payment_status,
-        ]);
-        $order_rescheduling_fee = getSetting('order_rescheduling_fee', 0);
-        if ($total_fees >= $order_rescheduling_fee) {
-            OrdersHelper::rescheduleExamination($order);
-            return (object)['success' => true, 'msg' => __('apps.rescheduling_applied')];
-        } else {
-            return (object)['success' => false, 'remaining' => ($order_rescheduling_fee - $total_fees)];
-        }
-    }
-
-    public static function doPaymentAlert(
-        $send_user_alert,
-        $user_id,
-        $body,
-        $amount,
-        $add_note_to_alert,
-        $description,
-        $alert_drivers
-    ) {
-        if ($send_user_alert == 1) {
-            $notify = new NotificationHelper('general', $user_id);
-            $notify->template = 'general';
-            $notify->model = 'general';
-            $notify->model_id = $user_id;
-            $notify->prepareData();
-            $notify->subject = __('Financial statements');
-            $notify->body = __($body);
-            $notify->body .= ':' . $amount . ' ' . __('SAR');
-            if ($add_note_to_alert == 1) {
-                $notify->body .= ', ' . $description;
-            }
-            $notify->drivers = $alert_drivers;
-            $notify->send();
-        }
-    }
-
-
-    public static function cancelPaidAmount(
-        $order,
-        $with_client_amount,
-        $with_examiner_amount,
-        $canceled_by
-    ) {
-
-
-        $is_free_canceling = is_string(OrdersHelper::calc_free_cancel_period($order, getSetting('orders_free_cancellation_period', 0)));
-
-        /**
-         * examiner manipulation
-         */
-        if ($with_examiner_amount && $order->offer) {
-            if ($order->company_id) { // its company orders
-                $canceling_amount = getSetting('companies_orders_examiner_canceling_discount_value', 0);
+        if ($user) {
+            if ($isArray) {
+                $ids = $user->pluck('id')->toArray();
             } else {
-                $canceling_amount = $order->offer->offer_amount * (getSetting('order_canceling_examiner_percentage', 0) / 100);
-            }
-            // companies orders not contain free canceling time
-            if ($canceling_amount > 0 && (!$is_free_canceling || $order->company_id)) {
-                WalletHelper::withdraw($order->examiner->id, $canceling_amount, '');
-                WalletHelper::addWithdrawOperation(
-                    $order->examiner->id,
-                    $order->id,
-                    PaymentsHelper::$wallet_operation,
-                    PaymentsHelper::$canceling_order_reason,
-                    $canceling_amount,
-                    ''
-                );
+                $ids = [$user->id];
             }
         }
 
-        /**
-         * calc client canceling amount
-         */
-        $canceling_amount = 0;
 
-        if (!$is_free_canceling && $with_client_amount && $order->offer) { // its not a free time
-            $canceling_amount = $order->offer->offer_amount * (getSetting('order_canceling_client_percentage', 0) / 100);
-        }
+        $orders = Orders::where('status', OrdersHelper::$completing_status);
 
-        $payments = PaymentsOperations::where('order_id', $order->id)
-            ->where('created_by', $order->created_by)
-            ->where('reason', PaymentsHelper::$accepting_offer_reason)
-            ->get();
-
-        $tap = new TapPaymentHelper();
-
-        if ($is_free_canceling) {
-            $reason = PaymentsHelper::$void_amount_reason;
-        } else {
-            $reason = PaymentsHelper::$refund_amount_reason;
+        if ('' . $paid != 'ignore') {
+            $orders = $orders->where($is_paid_filed, $paid);
         }
 
 
-        $tyqn_plus_user = UserHelper::getTyqnPlusUser();
 
-        /**
-         * remove already previous canceled amount
-         */
-        $prev_canceled_amount = PaymentsOperations::where('user_id', $tyqn_plus_user->id)
-            ->where('order_id', $order->id)
-            ->where('type', PaymentsHelper::$deposit_type)
-            ->where('reason', PaymentsHelper::$canceling_order_reason)->sum('amount');
-        if ($prev_canceled_amount) {
-            $canceling_amount -= $prev_canceled_amount;
+        if (sizeof($ids)) {
+            $orders = $orders->whereIn($user_field, $ids);
         }
 
-        foreach ($payments as $payment) {
-
-            if (!in_array(strtolower($payment->status), [self::$payment_refunded_status, self::$payment_voided_status])) {
-
-                $canceled_amount = $canceling_amount;
-                if ($payment->amount >= $canceling_amount) {
-                    $amount = $payment->amount - $canceling_amount;
-                    $canceling_amount = 0;
-                } else {
-                    $canceling_amount = $canceling_amount - $payment->amount;
-                    $canceled_amount = $payment->amount;
-                    $amount = 0;
-                }
-
-                if ($amount > 0) {
-                    if ($payment->gateway == 'wallet') {
-                        WalletHelper::deposit($order->owner->id, $amount, '');
-                        WalletHelper::addDepositOperation(
-                            $order->owner->id,
-                            $order->id,
-                            PaymentsHelper::$wallet_operation,
-                            $reason,
-                            $amount,
-                            ''
-                        );
-                    } elseif ($payment->gateway == 'tap') {
-                        $result = $tap->createRefund(
-                            $payment->operation_id,
-                            $payment->order_id,
-                            $amount,
-                            'refund_order',
-                            $payment->key_type
-                        );
-                    } elseif ($payment->gateway == 'moyasar') {
-                        try {
-                            $moyasar_payment = \Moyasar\Facades\Payment::fetch($payment->operation_id);
-                            $moyasar_payment->refund((int)$amount);
-                        } catch (\Exception $exception) {
-                            LoggerHelper::registerError(LoggerHelper::$moyasar_payment_error, [
-                                'class' => 'PaymentsHelper',
-                                'line_number' => 367,
-                                'error' => $exception->getMessage()
-                            ]);
-                        }
-                    }
-                }
-                /**
-                 * if there canceling fees added to tyqn plus account
-                 */
-                if ($canceled_amount > 0) {
-                    // if there fees withdraw it from client
-                    if ($payment->gateway == 'wallet') {
-                        WalletHelper::addWithdrawOperation(
-                            $order->created_by,
-                            $order->id,
-                            PaymentsHelper::$wallet_operation,
-                            PaymentsHelper::$canceling_order_reason,
-                            $canceled_amount,
-                            ''
-                        );
-                    }
-
-                    if ($payment->gateway == 'wallet') {
-                        WalletHelper::deposit($tyqn_plus_user->id, $canceled_amount, '');
-                    }
-                    PaymentsOperations::create([
-                        'user_id' => $tyqn_plus_user->id,
-                        'created_by' => auth()->check() ? auth()->user()->id : $tyqn_plus_user->id,
-                        'order_id' => $payment->order_id,
-                        'operation' => $payment->operation,
-                        'operation_id' => $payment->operation_id,
-                        'type' => PaymentsHelper::$deposit_type,
-                        'reason' => PaymentsHelper::$canceling_order_reason,
-                        'amount' => $canceled_amount,
-                        'reference' => $payment->reference,
-                        'details' => $payment->details,
-                        'gateway' => $payment->gateway,
-                        'status' => $payment->status,
-                    ]);
-                }
-
-                /**
-                 * register payment operation as refunded
-                 */
-                $payment->status = self::$payment_refunded_status;
-                $payment->save();
+        if ($receivable) {
+            $orders = $orders->whereBetween(DB::raw('DATE(created_at)'), [date($receivable->start_date), date($receivable->end_date)]);
+        }
+        if ('' . $hasTicket != 'ignore') {
+            if ($hasTicket) {
+                $orders = $orders->whereHas('openedTickets');
+            } else {
+                $orders = $orders->doesntHave('openedTickets');
             }
         }
-
-        /**
-         * add client gift amount if not previous gifted
-         */
-        $has_pref_gift_amount = PaymentsOperations::where('user_id', $order->created_by)
-            ->where('order_id', $order->id)
-            ->where('type', PaymentsHelper::$manager_operation)
-            ->where('reason', PaymentsHelper::$wallet_gift_reason)
-            ->first();
-
-        if (!$order->company_id && $order->offer && !$has_pref_gift_amount && $canceled_by != 'client') {
-            $client_gift_amount = getSetting('client_gift_amount', 0);
-            WalletHelper::deposit($order->owner->id, $client_gift_amount, 'Gift amount');
-            WalletHelper::addDepositOperation(
-                $order->owner->id,
-                $order->id,
-                PaymentsHelper::$manager_operation,
-                PaymentsHelper::$wallet_gift_reason,
-                $client_gift_amount,
-                'Gift amount'
-            );
-        }
+        return $orders;
     }
+
+    public static function getPaidAmount($user, $paid = 0, $receivable = null)
+    {
+        // $orders = self::getOrders($user, $paid, $receivable);
+        $paid_amount = 0;
+        // foreach ($orders->cursor() as $order) {
+        //     if ($user->isExaminer()) {
+        //         $paid_amount += floatval(OffersHelper::getAcceptingOfferDetails($order->offer)['examiner_app_amount']['examiner_amount']);
+        //     } else if ($user->isMarketer()) {
+        //         $paid_amount += round(floatval(OffersHelper::getAcceptingOfferDetails($order->offer)['examiner_app_amount']['application_amount']) * ($order->marketer_percentage / 100));
+        //     }
+        // }
+        return $paid_amount;
+    }
+    public static function getOutstandingAmount($user, $receivable = null, $hasTicket = false)
+    {
+        // is ticket included this type has openticket = true
+        // $orders = self::getOrders($user, 0, $receivable, false, $hasTicket);
+        $outstanding_amount = 0;
+        // foreach ($orders->cursor() as $order) {
+        //     if ($user->isExaminer()) {
+        //         $outstanding_amount += floatval(OffersHelper::getAcceptingOfferDetails($order->offer)['examiner_app_amount']['examiner_amount']);
+        //     } else if ($user->isMarketer()) {
+        //         $outstanding_amount += round(floatval(OffersHelper::getAcceptingOfferDetails($order->offer)['examiner_app_amount']['application_amount']) * ($order->marketer_percentage / 100));
+        //     }
+        // }
+        return $outstanding_amount;
+    }
+
+    public static function getAppAmount($user, $paid = 0, $receivable = null)
+    {
+        $orders = self::getOrders($user, $paid, $receivable);
+        $paid_amount = 0;
+        // foreach ($orders->cursor() as $order) {
+        //     $paid_amount += round(floatval(OffersHelper::getAcceptingOfferDetails($order->offer)['examiner_app_amount']['application_amount']));
+        // }
+        return $paid_amount;
+    }
+
+    public static function getTaxAmount($user, $paid = 0, $receivable = null)
+    {
+        //$orders = self::getOrders($user, $paid, $receivable);
+        $paid_amount = 0;
+        // foreach ($orders->cursor() as $order) {
+        //     $paid_amount += round(floatval(OffersHelper::getAcceptingOfferDetails($order->offer)['tax_amount']));
+        // }
+        return $paid_amount;
+    }
+
+    public static function getTotalAmount($user, $paid = 0, $receivable = null)
+    {
+        // $orders = self::getOrders($user, $paid, $receivable);
+        $paid_amount = 0;
+        // foreach ($orders->cursor() as $order) {
+        //     $paid_amount += round(floatval(OffersHelper::getAcceptingOfferDetails($order->offer)['amount_after_discount_tax']));
+        // }
+        return $paid_amount;
+    }
+
+    public static function getDetailsAmount($user, $paid = 0, $receivable = null, $hasTicket = false)
+    {
+        // $orders = self::getOrders($user, $paid, $receivable, false, $hasTicket);
+        $details = [
+            'total_amount_without_tax' => 0,
+            'paid_amount' => 0,
+            'application_amount' => 0,
+            'tax_amount' => 0,
+        ];
+        // foreach ($orders->cursor() as $order) {
+        //     if ($user->isExaminer()) {
+        //         $details['paid_amount'] += floatval(OffersHelper::getAcceptingOfferDetails($order->offer)['examiner_app_amount']['examiner_amount']);
+        //     } else if ($user->isMarketer()) {
+        //         $details['paid_amount'] += round(floatval(OffersHelper::getAcceptingOfferDetails($order->offer)['examiner_app_amount']['application_amount']) * ($order->marketer_percentage / 100));
+        //     }
+        //     $details['tax_amount'] += round(floatval(OffersHelper::getAcceptingOfferDetails($order->offer)['tax_amount']));
+        //     $details['application_amount'] += round(floatval(OffersHelper::getAcceptingOfferDetails($order->offer)['examiner_app_amount']['application_amount']));
+        //     $details['total_amount_without_tax'] += round(floatval(OffersHelper::getAcceptingOfferDetails($order->offer)['amount_after_discount_tax']));
+        // }
+        return $details;
+    }
+
+    // public static function doSecurityDepositOperation(
+    //     $user,
+    //     $amount,
+    //     $gateway,
+    //     $created_by,
+    //     $operation,
+    //     $operation_id,
+    //     $payment_reference,
+    //     $payment_status,
+    //     $details
+    // ) {
+    //     $security_deposit = $amount;
+    //     if ($user->security_deposit) {
+    //         $security_deposit += $user->security_deposit;
+    //     }
+    //     $user->security_deposit = $security_deposit;
+    //     $user->save();
+    //     PaymentsOperations::create([
+    //         'user_id' => $user->id,
+    //         'created_by' => $created_by,
+    //         'order_id' => null,
+    //         'operation' => $operation,
+    //         'type' => PaymentsHelper::$deposit_type,
+    //         'reason' => PaymentsHelper::$security_deposit_reason,
+    //         'amount' => $amount,
+    //         'reference' => $payment_reference,
+    //         'gateway' => $gateway,
+    //         'operation_id' => $operation_id,
+    //         'details' => is_array($details) ? json_encode($details) : $details,
+    //         'status' => $payment_status,
+    //     ]);
+    // }
+
+    // public static function doRescheduleFeesOperation(
+    //     $order,
+    //     $created_by,
+    //     $amount,
+    //     $gateway,
+    //     $operation,
+    //     $operation_id,
+    //     $payment_reference,
+    //     $payment_status,
+    //     $details
+
+    // ): object {
+
+    //     $total_fees = OrdersHelper::addRescheduleFee($order, $amount, $gateway);
+    //     PaymentsOperations::create([
+    //         'user_id' => $order->created_by,
+    //         'created_by' => $created_by,
+    //         'order_id' => $order->id,
+    //         'operation' => $operation,
+    //         'type' => PaymentsHelper::$deposit_type,
+    //         'reason' => PaymentsHelper::$reschedule_fees_reason,
+    //         'amount' => $amount,
+    //         'gateway' => $gateway,
+    //         'operation_id' => $operation_id,
+    //         'reference' => $payment_reference,
+    //         'details' => is_array($details) ? json_encode($details) : $details,
+    //         'status' => $payment_status,
+    //     ]);
+    //     $order_rescheduling_fee = getSetting('order_rescheduling_fee', 0);
+    //     if ($total_fees >= $order_rescheduling_fee) {
+    //         OrdersHelper::rescheduleExamination($order);
+    //         return (object)['success' => true, 'msg' => __('apps.rescheduling_applied')];
+    //     } else {
+    //         return (object)['success' => false, 'remaining' => ($order_rescheduling_fee - $total_fees)];
+    //     }
+    // }
+
+    // public static function doPaymentAlert(
+    //     $send_user_alert,
+    //     $user_id,
+    //     $body,
+    //     $amount,
+    //     $add_note_to_alert,
+    //     $description,
+    //     $alert_drivers
+    // ) {
+    //     if ($send_user_alert == 1) {
+    //         $notify = new NotificationHelper('general', $user_id);
+    //         $notify->template = 'general';
+    //         $notify->model = 'general';
+    //         $notify->model_id = $user_id;
+    //         $notify->prepareData();
+    //         $notify->subject = __('Financial statements');
+    //         $notify->body = __($body);
+    //         $notify->body .= ':' . $amount . ' ' . __('SAR');
+    //         if ($add_note_to_alert == 1) {
+    //             $notify->body .= ', ' . $description;
+    //         }
+    //         $notify->drivers = $alert_drivers;
+    //         $notify->send();
+    //     }
+    // }
+
+
+    // public static function cancelPaidAmount(
+    //     $order,
+    //     $with_client_amount,
+    //     $with_examiner_amount,
+    //     $canceled_by
+    // ) {
+
+
+    //     $is_free_canceling = is_string(OrdersHelper::calc_free_cancel_period($order, getSetting('orders_free_cancellation_period', 0)));
+
+    //     /**
+    //      * examiner manipulation
+    //      */
+    //     if ($with_examiner_amount && $order->offer) {
+    //         if ($order->company_id) { // its company orders
+    //             $canceling_amount = getSetting('companies_orders_examiner_canceling_discount_value', 0);
+    //         } else {
+    //             $canceling_amount = $order->offer->offer_amount * (getSetting('order_canceling_examiner_percentage', 0) / 100);
+    //         }
+    //         // companies orders not contain free canceling time
+    //         if ($canceling_amount > 0 && (!$is_free_canceling || $order->company_id)) {
+    //             WalletHelper::withdraw($order->examiner->id, $canceling_amount, '');
+    //             WalletHelper::addWithdrawOperation(
+    //                 $order->examiner->id,
+    //                 $order->id,
+    //                 PaymentsHelper::$wallet_operation,
+    //                 PaymentsHelper::$canceling_order_reason,
+    //                 $canceling_amount,
+    //                 ''
+    //             );
+    //         }
+    //     }
+
+    //     /**
+    //      * calc client canceling amount
+    //      */
+    //     $canceling_amount = 0;
+
+    //     if (!$is_free_canceling && $with_client_amount && $order->offer) { // its not a free time
+    //         $canceling_amount = $order->offer->offer_amount * (getSetting('order_canceling_client_percentage', 0) / 100);
+    //     }
+
+    //     $payments = PaymentsOperations::where('order_id', $order->id)
+    //         ->where('created_by', $order->created_by)
+    //         ->where('reason', PaymentsHelper::$accepting_offer_reason)
+    //         ->get();
+
+    //     $tap = new TapPaymentHelper();
+
+    //     if ($is_free_canceling) {
+    //         $reason = PaymentsHelper::$void_amount_reason;
+    //     } else {
+    //         $reason = PaymentsHelper::$refund_amount_reason;
+    //     }
+
+
+    //     $tyqn_plus_user = UserHelper::getTyqnPlusUser();
+
+    //     /**
+    //      * remove already previous canceled amount
+    //      */
+    //     $prev_canceled_amount = PaymentsOperations::where('user_id', $tyqn_plus_user->id)
+    //         ->where('order_id', $order->id)
+    //         ->where('type', PaymentsHelper::$deposit_type)
+    //         ->where('reason', PaymentsHelper::$canceling_order_reason)->sum('amount');
+    //     if ($prev_canceled_amount) {
+    //         $canceling_amount -= $prev_canceled_amount;
+    //     }
+
+    //     foreach ($payments as $payment) {
+
+    //         if (!in_array(strtolower($payment->status), [self::$payment_refunded_status, self::$payment_voided_status])) {
+
+    //             $canceled_amount = $canceling_amount;
+    //             if ($payment->amount >= $canceling_amount) {
+    //                 $amount = $payment->amount - $canceling_amount;
+    //                 $canceling_amount = 0;
+    //             } else {
+    //                 $canceling_amount = $canceling_amount - $payment->amount;
+    //                 $canceled_amount = $payment->amount;
+    //                 $amount = 0;
+    //             }
+
+    //             if ($amount > 0) {
+    //                 if ($payment->gateway == 'wallet') {
+    //                     WalletHelper::deposit($order->owner->id, $amount, '');
+    //                     WalletHelper::addDepositOperation(
+    //                         $order->owner->id,
+    //                         $order->id,
+    //                         PaymentsHelper::$wallet_operation,
+    //                         $reason,
+    //                         $amount,
+    //                         ''
+    //                     );
+    //                 } elseif ($payment->gateway == 'tap') {
+    //                     $result = $tap->createRefund(
+    //                         $payment->operation_id,
+    //                         $payment->order_id,
+    //                         $amount,
+    //                         'refund_order',
+    //                         $payment->key_type
+    //                     );
+    //                 } elseif ($payment->gateway == 'moyasar') {
+    //                     try {
+    //                         $moyasar_payment = \Moyasar\Facades\Payment::fetch($payment->operation_id);
+    //                         $moyasar_payment->refund((int)$amount);
+    //                     } catch (\Exception $exception) {
+    //                         LoggerHelper::registerError(LoggerHelper::$moyasar_payment_error, [
+    //                             'class' => 'PaymentsHelper',
+    //                             'line_number' => 367,
+    //                             'error' => $exception->getMessage()
+    //                         ]);
+    //                     }
+    //                 }
+    //             }
+    //             /**
+    //              * if there canceling fees added to tyqn plus account
+    //              */
+    //             if ($canceled_amount > 0) {
+    //                 // if there fees withdraw it from client
+    //                 if ($payment->gateway == 'wallet') {
+    //                     WalletHelper::addWithdrawOperation(
+    //                         $order->created_by,
+    //                         $order->id,
+    //                         PaymentsHelper::$wallet_operation,
+    //                         PaymentsHelper::$canceling_order_reason,
+    //                         $canceled_amount,
+    //                         ''
+    //                     );
+    //                 }
+
+    //                 if ($payment->gateway == 'wallet') {
+    //                     WalletHelper::deposit($tyqn_plus_user->id, $canceled_amount, '');
+    //                 }
+    //                 PaymentsOperations::create([
+    //                     'user_id' => $tyqn_plus_user->id,
+    //                     'created_by' => auth()->check() ? auth()->user()->id : $tyqn_plus_user->id,
+    //                     'order_id' => $payment->order_id,
+    //                     'operation' => $payment->operation,
+    //                     'operation_id' => $payment->operation_id,
+    //                     'type' => PaymentsHelper::$deposit_type,
+    //                     'reason' => PaymentsHelper::$canceling_order_reason,
+    //                     'amount' => $canceled_amount,
+    //                     'reference' => $payment->reference,
+    //                     'details' => $payment->details,
+    //                     'gateway' => $payment->gateway,
+    //                     'status' => $payment->status,
+    //                 ]);
+    //             }
+
+    //             /**
+    //              * register payment operation as refunded
+    //              */
+    //             $payment->status = self::$payment_refunded_status;
+    //             $payment->save();
+    //         }
+    //     }
+
+    //     /**
+    //      * add client gift amount if not previous gifted
+    //      */
+    //     $has_pref_gift_amount = PaymentsOperations::where('user_id', $order->created_by)
+    //         ->where('order_id', $order->id)
+    //         ->where('type', PaymentsHelper::$manager_operation)
+    //         ->where('reason', PaymentsHelper::$wallet_gift_reason)
+    //         ->first();
+
+    //     if (!$order->company_id && $order->offer && !$has_pref_gift_amount && $canceled_by != 'client') {
+    //         $client_gift_amount = getSetting('client_gift_amount', 0);
+    //         WalletHelper::deposit($order->owner->id, $client_gift_amount, 'Gift amount');
+    //         WalletHelper::addDepositOperation(
+    //             $order->owner->id,
+    //             $order->id,
+    //             PaymentsHelper::$manager_operation,
+    //             PaymentsHelper::$wallet_gift_reason,
+    //             $client_gift_amount,
+    //             'Gift amount'
+    //         );
+    //     }
+    // }
 }

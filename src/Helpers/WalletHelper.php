@@ -1,12 +1,9 @@
 <?php
 
+namespace AsayHome\AsayHelpers\Helpers;
 
-namespace Infty\Helpers\Helpers;
-
-
-use App\Models\Backend\Orders;
-use Infty\Helpers\Helpers\PaymentsHelper;
-use Infty\Helpers\Models\PaymentsOperations;
+use AsayHome\AsayHelpers\Models\AsayPaymentsOperations;
+use AsayHome\AsayHelpers\Models\UserModel;
 
 class WalletHelper
 {
@@ -17,7 +14,7 @@ class WalletHelper
 
     public static function getUserInstance()
     {
-        return config('inftyhelpers.user_model');
+        return UserModel::class;
     }
 
     public static function getUserWalletInstance($user, $wallet_name)
@@ -38,7 +35,7 @@ class WalletHelper
 
     public static function getBalance($user_id, $wallet_name = null)
     {
-        $user = self::getUserInstance()->where('id', $user_id)->first();
+        $user = UserModel::where('id', $user_id)->first();
         if ($user) {
             if ($wallet_name) {
                 $wallet = self::getUserWalletInstance($user, $wallet_name);
@@ -61,7 +58,7 @@ class WalletHelper
             ];
         }
 
-        $user = self::getUserInstance()->where('id', $user_id)->first();
+        $user = UserModel::where('id', $user_id)->first();
         if ($user) {
             $wallet = self::getUserWalletInstance($user, $wallet_name);
             $wallet->depositFloat(floatval($amount), $meta);
@@ -79,7 +76,7 @@ class WalletHelper
                 'user_id' => $user_id
             ];
         }
-        $user = self::getUserInstance()->where('id', $user_id)->first();
+        $user = UserModel::where('id', $user_id)->first();
         if ($user) {
             $wallet = self::getUserWalletInstance($user, $wallet_name);
             $wallet->forceWithdrawFloat(floatval($amount), $meta);
@@ -104,8 +101,8 @@ class WalletHelper
             ];
         }
 
-        $from_user = self::getUserInstance()->where('id', $from_user_id)->first();
-        $to_user = self::getUserInstance()->where('id', $to_user_id)->first();
+        $from_user = UserModel::where('id', $from_user_id)->first();
+        $to_user = UserModel::where('id', $to_user_id)->first();
         if ($from_user) {
             $from_user_wallet = self::getUserWalletInstance($from_user, $from_user_wallet);
             $to_user_wallet = self::getUserWalletInstance($to_user, $to_user_wallet);
@@ -118,7 +115,7 @@ class WalletHelper
     public static function addDepositOperation($user_id, $order_id, $operation, $reason, $amount, $notes = '')
     {
         if ($amount > 0) {
-            PaymentsOperations::create([
+            AsayPaymentsOperations::create([
                 'user_id' => $user_id,
                 'created_by' => auth()->check() ? auth()->user()->id : $user_id,
                 'order_id' => $order_id,
@@ -138,7 +135,7 @@ class WalletHelper
     public static function addWithdrawOperation($user_id, $order_id, $operation, $reason, $amount, $notes = '')
     {
         if ($amount > 0) {
-            PaymentsOperations::create([
+            AsayPaymentsOperations::create([
                 'user_id' => $user_id,
                 'created_by' => auth()->check() ? auth()->user()->id : $user_id,
                 'order_id' => $order_id,
@@ -161,46 +158,46 @@ class WalletHelper
 
     public static function transferNotify($receiver_id, $subject = '', $body = '')
     {
-        $notify = new \App\Helpers\NotificationHelper('general', $receiver_id, '');
-        $notify->prepareData();
-        if (strlen($subject) > 0) {
-            $notify->subject = $subject;
-        }
-        if (strlen($body) > 0) {
-            $notify->body = $body;
-        }
-        $notify->send();
+        // $notify = new \App\Helpers\NotificationHelper('general', $receiver_id, '');
+        // $notify->prepareData();
+        // if (strlen($subject) > 0) {
+        //     $notify->subject = $subject;
+        // }
+        // if (strlen($body) > 0) {
+        //     $notify->body = $body;
+        // }
+        // $notify->send();
     }
 
-    public static function reschedulingOrder($order_id, $fees, $gateway = 'wallet')
-    {
-        try {
-            $order = Orders::where('id', $order_id)->first();
-            if (floatval($order->owner->getBalance()) < $fees) {
-                goto end;
-            }
-            WalletHelper::withdraw($order->created_by, $fees, PaymentsHelper::$reschedule_fees_reason);
-            WalletHelper::addWithdrawOperation(
-                $order->created_by,
-                $order->id,
-                PaymentsHelper::$wallet_operation,
-                PaymentsHelper::$reschedule_fees_reason,
-                $fees,
-                ''
-            );
-            $total_fees = OrdersHelper::addRescheduleFee($order, $fees, $gateway);
-            $order_rescheduling_fee = getSetting('order_rescheduling_fee', 0);
-            if ($total_fees >= $order_rescheduling_fee) {
-                OrdersHelper::rescheduleExamination($order);
-                return (object)array('success' => true, 'msg' => __('apps.rescheduling_applied'));
-            } else {
-                return (object)array('success' => false, 'remaining' => ($order_rescheduling_fee - $total_fees));
-            }
-        } catch (\Exception $e) {
-            return (object)array('success' => false, 'msg' => $e->getMessage());
-        }
+    // public static function reschedulingOrder($order_id, $fees, $gateway = 'wallet')
+    // {
+    //     try {
+    //         $order = Orders::where('id', $order_id)->first();
+    //         if (floatval($order->owner->getBalance()) < $fees) {
+    //             goto end;
+    //         }
+    //         WalletHelper::withdraw($order->created_by, $fees, PaymentsHelper::$reschedule_fees_reason);
+    //         WalletHelper::addWithdrawOperation(
+    //             $order->created_by,
+    //             $order->id,
+    //             PaymentsHelper::$wallet_operation,
+    //             PaymentsHelper::$reschedule_fees_reason,
+    //             $fees,
+    //             ''
+    //         );
+    //         $total_fees = OrdersHelper::addRescheduleFee($order, $fees, $gateway);
+    //         $order_rescheduling_fee = getSetting('order_rescheduling_fee', 0);
+    //         if ($total_fees >= $order_rescheduling_fee) {
+    //             OrdersHelper::rescheduleExamination($order);
+    //             return (object)array('success' => true, 'msg' => __('apps.rescheduling_applied'));
+    //         } else {
+    //             return (object)array('success' => false, 'remaining' => ($order_rescheduling_fee - $total_fees));
+    //         }
+    //     } catch (\Exception $e) {
+    //         return (object)array('success' => false, 'msg' => $e->getMessage());
+    //     }
 
-        end:
-        return (object)array('success' => false, 'msg' => __('apps.has_not_enough_balance'));
-    }
+    //     end:
+    //     return (object)array('success' => false, 'msg' => __('apps.has_not_enough_balance'));
+    // }
 }
