@@ -135,6 +135,13 @@ class WalletHelper
     public static function addWithdrawOperation($user_id, $order_id, $operation, $reason, $amount, $notes = '')
     {
         if ($amount > 0) {
+            WalletHelper::withdraw($user_id,  $amount, [
+                'balance' =>  $amount,
+                'description' => 'Wallet withdraw operation',
+                'created_by' => auth()->check() ? auth()->user()->id : $user_id,
+                'timestamp' => date('Y-m-d H:i:s', time()),
+            ]);
+
             AsayPaymentsOperations::create([
                 'user_id' => $user_id,
                 'created_by' => auth()->check() ? auth()->user()->id : $user_id,
@@ -176,7 +183,6 @@ class WalletHelper
     //         if (floatval($order->owner->getBalance()) < $fees) {
     //             goto end;
     //         }
-    //         WalletHelper::withdraw($order->created_by, $fees, PaymentsHelper::$reschedule_fees_reason);
     //         WalletHelper::addWithdrawOperation(
     //             $order->created_by,
     //             $order->id,

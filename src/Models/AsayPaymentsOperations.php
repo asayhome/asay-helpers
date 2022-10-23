@@ -38,6 +38,11 @@ class AsayPaymentsOperations extends Model
         return $this->hasOne(UserModel::class, 'id', 'created_by');
     }
 
+    public function getDetailsAttribute($value)
+    {
+        return json_decode($value, true);
+    }
+
     public $dates = [
         'created_at',
     ];

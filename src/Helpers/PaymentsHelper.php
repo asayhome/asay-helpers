@@ -3,6 +3,7 @@
 
 namespace AsayHome\AsayHelpers\Helpers;
 
+use App\Helpers\OrdersHelper;
 use AsayHome\AsayHelpers\Models\AsayPaymentsOperations;
 
 class PaymentsHelper
@@ -49,7 +50,7 @@ class PaymentsHelper
      * reasons
      */
 
-    public static $accepting_offer_reason = 1;
+    public static $accepting_reason = 1;
     public static $remaining_coupon_value_reason = 2;
     public static $discount_reason = 3;
     public static $wallet_deposit_reason = 4;
@@ -68,7 +69,7 @@ class PaymentsHelper
     public static function getReasons(): array
     {
         return [
-            self::$accepting_offer_reason => __('Accepting offer'),
+            self::$accepting_reason => __('Accepting offer'),
             self::$remaining_coupon_value_reason => __('Remaining coupon value'),
             self::$discount_reason => __('Discount'),
             self::$wallet_deposit_reason => __('Wallet deposit'),
@@ -83,6 +84,32 @@ class PaymentsHelper
             self::$refund_amount_reason => __('Refund amount'),
             self::$rejecting_order_reason => __('Rejecting order'),
             self::$transfer_to_tyqn_account_reason => __('Transfer to tyaqan account')
+        ];
+    }
+
+
+
+    public function toArray(): array
+    {
+        return get_object_vars($this);
+    }
+
+    public static function getDefaultMetaArray(): array
+    {
+        return [
+            'requested_by' => 'backend',
+            'operation' => '',
+            'operation_type' => 'deposit',
+            'gateway' => '',
+            'amount' => '',
+            'reason' => '',
+            'user_id' => '',
+            'created_by' => '',
+            'description' => '',
+            'send_user_alert' => '',
+            'alert_drivers' => '',
+            'add_note_to_alert' => '',
+            'back_url' => '',
         ];
     }
 
@@ -106,24 +133,28 @@ class PaymentsHelper
             'created_by' => $created_by,
             'timestamp' => date('Y-m-d H:i:s', time()),
         ]);
-        AsayPaymentsOperations::create([
-            'user_id' => $user_id,
-            'created_by' => $created_by,
-            'order_id' => null,
-            'operation' => $operation,
-            'operation_id' => $operation_id,
-            'type' => self::$deposit_type,
-            'reason' => self::$wallet_deposit_reason,
-            'amount' => $amount,
-            'reference' => $payment_reference,
-            'gateway' => $gateway,
-            'details' => is_array($details) ? json_encode($details) : $details,
-            'status' => $payment_status,
-        ]);
+        try {
+            AsayPaymentsOperations::create([
+                'user_id' => $user_id,
+                'created_by' => $created_by,
+                'order_id' => null,
+                'operation' => $operation,
+                'operation_id' => $operation_id,
+                'type' => self::$deposit_type,
+                'reason' => self::$wallet_deposit_reason,
+                'amount' => $amount,
+                'reference' => $payment_reference,
+                'gateway' => $gateway,
+                'details' => is_array($details) ? json_encode($details) : $details,
+                'status' => $payment_status,
+            ]);
+        } catch (\Throwable $th) {
+            dd($th->getMessage());
+        }
     }
 
-    public static function doAcceptOfferOperation(
-        $offer,
+    public static function doSendingOrderOperation(
+        $order,
         $amount,
         $gateway,
         $user_id,
@@ -135,22 +166,22 @@ class PaymentsHelper
         $details
     ) {
         // (1): important: register the payment firstly
-        // AsayPaymentsOperations::create([
-        //     'user_id' => $user_id,
-        //     'created_by' => $created_by,
-        //     'order_id' => $offer->order_id,
-        //     'operation' => $operation,
-        //     'type' => self::$deposit_type,
-        //     'reason' => self::$accepting_offer_reason,
-        //     'amount' => $amount,
-        //     'reference' => $payment_reference,
-        //     'gateway' => $gateway,
-        //     'operation_id' => $operation_id,
-        //     'details' => is_array($details) ? json_encode($details) : $details,
-        //     'status' => $payment_status,
-        // ]);
-        // // (2): do accept offer secondly
-        // OffersHelper::acceptOffer($offer, $amount, $gateway);
+        AsayPaymentsOperations::create([
+            'user_id' => $user_id,
+            'created_by' => $created_by,
+            'order_id' => $order->id,
+            'operation' => $operation,
+            'type' => self::$deposit_type,
+            'reason' => self::$accepting_reason,
+            'amount' => $amount,
+            'reference' => $payment_reference,
+            'gateway' => $gateway,
+            'operation_id' => $operation_id,
+            'details' => is_array($details) ? json_encode($details) : $details,
+            'status' => $payment_status,
+        ]);
+        // (2): change order status to sending
+        OrdersHelper::changeOrderToSend($order);
     }
 
 
@@ -297,38 +328,38 @@ class PaymentsHelper
         return $details;
     }
 
-    // public static function doSecurityDepositOperation(
-    //     $user,
-    //     $amount,
-    //     $gateway,
-    //     $created_by,
-    //     $operation,
-    //     $operation_id,
-    //     $payment_reference,
-    //     $payment_status,
-    //     $details
-    // ) {
-    //     $security_deposit = $amount;
-    //     if ($user->security_deposit) {
-    //         $security_deposit += $user->security_deposit;
-    //     }
-    //     $user->security_deposit = $security_deposit;
-    //     $user->save();
-    //     PaymentsOperations::create([
-    //         'user_id' => $user->id,
-    //         'created_by' => $created_by,
-    //         'order_id' => null,
-    //         'operation' => $operation,
-    //         'type' => PaymentsHelper::$deposit_type,
-    //         'reason' => PaymentsHelper::$security_deposit_reason,
-    //         'amount' => $amount,
-    //         'reference' => $payment_reference,
-    //         'gateway' => $gateway,
-    //         'operation_id' => $operation_id,
-    //         'details' => is_array($details) ? json_encode($details) : $details,
-    //         'status' => $payment_status,
-    //     ]);
-    // }
+    public static function doSecurityDepositOperation(
+        $user,
+        $amount,
+        $gateway,
+        $created_by,
+        $operation,
+        $operation_id,
+        $payment_reference,
+        $payment_status,
+        $details
+    ) {
+        $security_deposit = $amount;
+        if ($user->security_deposit) {
+            $security_deposit += $user->security_deposit;
+        }
+        $user->security_deposit = $security_deposit;
+        $user->save();
+        AsayPaymentsOperations::create([
+            'user_id' => $user->id,
+            'created_by' => $created_by,
+            'order_id' => null,
+            'operation' => $operation,
+            'type' => self::$deposit_type,
+            'reason' => self::$security_deposit_reason,
+            'amount' => $amount,
+            'reference' => $payment_reference,
+            'gateway' => $gateway,
+            'operation_id' => $operation_id,
+            'details' => is_array($details) ? json_encode($details) : $details,
+            'status' => $payment_status,
+        ]);
+    }
 
     // public static function doRescheduleFeesOperation(
     //     $order,
@@ -367,31 +398,31 @@ class PaymentsHelper
     //     }
     // }
 
-    // public static function doPaymentAlert(
-    //     $send_user_alert,
-    //     $user_id,
-    //     $body,
-    //     $amount,
-    //     $add_note_to_alert,
-    //     $description,
-    //     $alert_drivers
-    // ) {
-    //     if ($send_user_alert == 1) {
-    //         $notify = new NotificationHelper('general', $user_id);
-    //         $notify->template = 'general';
-    //         $notify->model = 'general';
-    //         $notify->model_id = $user_id;
-    //         $notify->prepareData();
-    //         $notify->subject = __('Financial statements');
-    //         $notify->body = __($body);
-    //         $notify->body .= ':' . $amount . ' ' . __('SAR');
-    //         if ($add_note_to_alert == 1) {
-    //             $notify->body .= ', ' . $description;
-    //         }
-    //         $notify->drivers = $alert_drivers;
-    //         $notify->send();
-    //     }
-    // }
+    public static function doPaymentAlert(
+        $send_user_alert,
+        $user_id,
+        $body,
+        $amount,
+        $add_note_to_alert,
+        $description,
+        $alert_drivers
+    ) {
+        if ($send_user_alert == 1) {
+            // $notify = new NotificationHelper('general', $user_id);
+            // $notify->template = 'general';
+            // $notify->model = 'general';
+            // $notify->model_id = $user_id;
+            // $notify->prepareData();
+            // $notify->subject = __('Financial statements');
+            // $notify->body = __($body);
+            // $notify->body .= ':' . $amount . ' ' . __('SAR');
+            // if ($add_note_to_alert == 1) {
+            //     $notify->body .= ', ' . $description;
+            // }
+            // $notify->drivers = $alert_drivers;
+            // $notify->send();
+        }
+    }
 
 
     // public static function cancelPaidAmount(
@@ -438,7 +469,7 @@ class PaymentsHelper
 
     //     $payments = PaymentsOperations::where('order_id', $order->id)
     //         ->where('created_by', $order->created_by)
-    //         ->where('reason', PaymentsHelper::$accepting_offer_reason)
+    //         ->where('reason', PaymentsHelper::$accepting_reason)
     //         ->get();
 
     //     $tap = new TapPaymentHelper();

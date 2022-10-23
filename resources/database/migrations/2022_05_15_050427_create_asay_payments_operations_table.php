@@ -13,7 +13,7 @@ class CreateAsayPaymentsOperationsTable extends Migration
             $table->id();
             $table->foreignIdFor(UserModel::class, 'user_id');
             $table->foreignIdFor(UserModel::class, 'created_by');
-            $table->unsignedBigInteger('order_id');
+            $table->unsignedBigInteger('order_id')->nullable();
             $table->integer('operation');
             $table->string('operation_id')->nullable();
             $table->integer('type');
