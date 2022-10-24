@@ -103,8 +103,8 @@ class CouponsHelper
             ->where('from_date', '<=', \Carbon\Carbon::now()->toDateString())
             ->where('to_date', '>=', \Carbon\Carbon::now()->toDateString())->cursor() as $coupon) {
             $users = [];
-            if ($coupon->users && is_array(json_decode($coupon->users, true))) {
-                $users = json_decode($coupon->users, true);
+            if (is_array($coupon->users)) {
+                $users = $coupon->users;
             }
             if (in_array($user_id, $users) || in_array(self::$coupons_all_users, $users)) {
                 //check to be not userd before by current user
