@@ -3,7 +3,7 @@
 
 namespace App\Helpers;
 
-use Infty\AppSettings\AppSettingsHelper;
+use AsayHome\AsayHelpers\Helpers\AppHelper;
 
 class SlimNotifier
 {
@@ -19,7 +19,7 @@ class SlimNotifier
             'title' => $title,
             'message' => $message,
             'duration' => $duration,
-            'theme' => AppSettingsHelper::getSetting('app_default_notifier', 'slime'),   // slime,flashjs
+            'theme' => AppHelper::getSettings('app_default_notifier', 'slime'),   // slime,flashjs
         );
     }
 }
