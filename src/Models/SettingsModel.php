@@ -11,4 +11,9 @@ class SettingsModel extends Model
     use HasFactory, SoftDeletes;
 
     public $table = 'settings';
+
+    public $fillable = [
+        'key',
+        'value',
+    ];
 }
