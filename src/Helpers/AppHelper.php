@@ -89,7 +89,7 @@ class AppHelper
         return $html;
     }
 
-    function generateOTP($length, $HasChars = true, $hasNums = true)
+    public static function generateOTP($length, $HasChars = true, $hasNums = true)
     {
         $alpha = '';
         if ($HasChars) {
