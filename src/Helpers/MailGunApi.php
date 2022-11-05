@@ -1,7 +1,7 @@
 <?php
 
 
-namespace App\Plugins\Helpers;
+namespace AsayHome\AsayHelpers\Helpers;
 
 
 class MailGunApi
@@ -17,7 +17,7 @@ class MailGunApi
     }
 
 
-    public function updateTemplate($template_name, $template_content,$tag_version='initial', $options = [])
+    public function updateTemplate($template_name, $template_content, $tag_version = 'initial', $options = [])
     {
         $params = [
             'active' => 'yes'
@@ -30,14 +30,13 @@ class MailGunApi
         );
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_setopt($ch, CURLOPT_USERPWD, 'api:'.$this->api_key);
+        curl_setopt($ch, CURLOPT_USERPWD, 'api:' . $this->api_key);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
-        curl_setopt($ch, CURLOPT_URL, 'https://api.mailgun.net/v3/'.$this->domain.'/templates/'.$template_name.'/versions/'.$tag_version);
+        curl_setopt($ch, CURLOPT_URL, 'https://api.mailgun.net/v3/' . $this->domain . '/templates/' . $template_name . '/versions/' . $tag_version);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
         $result = curl_exec($ch);
         curl_close($ch);
         return $result;
     }
-
 }

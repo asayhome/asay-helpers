@@ -1,7 +1,7 @@
 <?php
 
 
-namespace App\Helpers;
+namespace AsayHome\AsayHelpers\Helpers;
 
 use AsayHome\AsayHelpers\Helpers\AppHelper;
 
