@@ -532,7 +532,7 @@ class PaymentsHelper
     //                         $moyasar_payment = \Moyasar\Facades\Payment::fetch($payment->operation_id);
     //                         $moyasar_payment->refund((int)$amount);
     //                     } catch (\Exception $exception) {
-    //                         LoggerHelper::registerError(LoggerHelper::$moyasar_payment_error, [
+    //                          LogsHelper::appError(LogsHelper::$moyasar_payment_error, [
     //                             'class' => 'PaymentsHelper',
     //                             'line_number' => 367,
     //                             'error' => $exception->getMessage()

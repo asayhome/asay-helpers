@@ -86,7 +86,7 @@ class OneSignalHelper
         $result = self::doReguest(self::create_segment_url, $credential['app_key'], $fields);
         if (isset($result['errors'])) {
             unset($fields['app_id']);
-            LoggerHelper::registerError('OneSignalApi', [
+            LogsHelper::appError('OneSignalApi', [
                 'fields' => $fields,
                 'result' => $result
             ]);

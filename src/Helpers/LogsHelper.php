@@ -59,4 +59,17 @@ class LogsHelper
     {
         self::providerAppLog('error', $message);
     }
+    public static function appError($subject, $message)
+    {
+        $details = [
+            'created_at' => now()
+        ];
+        if (is_array($message)) {
+            $details = array_merge($details, $message);
+        } else {
+            $details['message'] = $message;
+        }
+
+        Log::error($subject, $details);
+    }
 }
