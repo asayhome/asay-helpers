@@ -98,9 +98,8 @@ class OrdersHelper
             }
         }
         // calc amount with tax
-        $amount_with_tax = floatval($remaining_amount) * floatval('0.' . $order_tax);
-        $details['amount_tax'] = round($amount_with_tax);
-        $remaining_amount = floatval($remaining_amount) + $amount_with_tax;
+        $details['amount_without_tax'] = floatval($remaining_amount);
+        $remaining_amount = floatval($remaining_amount) + (floatval($remaining_amount) * floatval('0.' . $order_tax));
         $details['amount_with_tax'] = round(floatval($remaining_amount));
         $details['remaining_amount'] = round(floatval($remaining_amount));
         // calc other payments operations
