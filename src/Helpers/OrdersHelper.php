@@ -29,9 +29,6 @@ class OrdersHelper
         $details['tax_amount'] = round($order_tax_amount);
         $details['tax_percentage'] = $order_tax;
         // calc amount after discount the tax
-        $remaining_amount -= $order_tax_amount;
-        $details['amount_after_discount_tax'] = round($remaining_amount);
-        // calc the provider and application amount
 
         $provider_app_percentage = 100 / ($order_provider_percentage + $order_application_percentage);
         $provider_percentage = $provider_app_percentage * ($order_provider_percentage / 100);
@@ -101,8 +98,9 @@ class OrdersHelper
             }
         }
         // calc amount with tax
-        $details['amount_tax'] = round(floatval($remaining_amount) * floatval('0.' . $order_tax));
-        $remaining_amount = floatval($remaining_amount) + (floatval($remaining_amount) * floatval('0.' . $order_tax));
+        $amount_with_tax = floatval($remaining_amount) * floatval('0.' . $order_tax);
+        $details['amount_tax'] = round($amount_with_tax);
+        $remaining_amount = floatval($remaining_amount) + $amount_with_tax;
         $details['amount_with_tax'] = round(floatval($remaining_amount));
         $details['remaining_amount'] = round(floatval($remaining_amount));
         // calc other payments operations
