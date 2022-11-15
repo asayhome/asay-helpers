@@ -3,6 +3,7 @@
 namespace AsayHome\AsayHelpers\Helpers;
 
 use AsayHome\AsayHelpers\Models\SettingsModel;
+use Illuminate\Support\Facades\Artisan;
 
 class AppHelper
 {
@@ -104,5 +105,10 @@ class AppHelper
             $randomString .= $alpha[rand(0, $charactersLength - 1)];
         }
         return  $randomString;
+    }
+
+    public static function runArtisionCommand($command = 'config:cache')
+    {
+        Artisan::call($command);
     }
 }
