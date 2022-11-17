@@ -13,37 +13,21 @@ class OneSignalHelper
 
     private static function getCredential($user_id)
     {
-        if (userHasRole($user_id, PermissionsHelper::$role_client) || userHasRole($user_id, PermissionsHelper::$role_administrator)) {
-            $setting = getSetting([
-                'onesignal_client_app_id',
-                'onesignal_client_app_key'
-            ]);
-            return [
-                'app_id' => $setting['onesignal_client_app_id'],
-                'app_key' => $setting['onesignal_client_app_key'],
-                'user_auth_key' => ''
-            ];
-        } else {
-            $setting = getSetting([
-                'onesignal_examiner_app_id',
-                'onesignal_examiner_app_key'
-            ]);
-            return [
-                'app_id' => $setting['onesignal_examiner_app_id'],
-                'app_key' => $setting['onesignal_examiner_app_key'],
-                'user_auth_key' => ''
-            ];
-        }
+        $setting = getSetting([
+            'onesignal_client_app_id',
+            'onesignal_client_app_key'
+        ]);
+        return [
+            'app_id' => $setting['onesignal_client_app_id'],
+            'app_key' => $setting['onesignal_client_app_key'],
+            'user_auth_key' => ''
+        ];
     }
 
 
     public static function getUserAppId($user_id)
     {
-        if (userHasRole($user_id, PermissionsHelper::$role_client) || userHasRole($user_id, PermissionsHelper::$role_administrator)) {
-            return getSetting('onesignal_client_app_id', '');
-        } else {
-            return getSetting('onesignal_examiner_app_id', '');
-        }
+        return getSetting('onesignal_client_app_id', '');
     }
 
 
