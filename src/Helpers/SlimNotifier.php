@@ -3,7 +3,7 @@
 
 namespace AsayHome\AsayHelpers\Helpers;
 
-use AsayHome\AsayHelpers\Helpers\AppHelper;
+use Tik\AppSettings\Helpers\AppHelper;
 
 class SlimNotifier
 {
