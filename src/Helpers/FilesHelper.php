@@ -3,6 +3,7 @@
 namespace AsayHome\AsayHelpers\Helpers;
 
 use Spatie\LaravelImageOptimizer\Facades\ImageOptimizer;
+use Tik\AppSettings\Helpers\AppHelper;
 
 class FilesHelper
 {
