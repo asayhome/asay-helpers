@@ -55,6 +55,7 @@ class OrdersHelper
                     $coupon_details = $payment->details;
                     if ($coupon_details['discount_type'] == CouponsHelper::$coupons_discount_by_percentage) {
                         $discount_value = round(floatval($remaining_amount) * (floatval($coupon_details['discount_value']) / 100));
+                        $details['discount_value'] += $discount_value;
                         $remaining_amount -= $discount_value;
                         if ($coupon_details['discount_from'] == CouponsHelper::$coupons_discount_from_application) {
                             $details['provider_app_amount']['application_amount'] -= round($application_percentage * $remaining_amount);
