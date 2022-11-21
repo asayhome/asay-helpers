@@ -2,6 +2,8 @@
 
 namespace AsayHome\AsayHelpers\Helpers\Payments;
 
+use Tik\AppSettings\Helpers\AppHelper;
+
 class MoyasarPaymentHelper
 {
     public static $status_paid = 'paid';
@@ -22,7 +24,7 @@ class MoyasarPaymentHelper
 
     public static function getKey()
     {
-        $settings = getSettings([
+        $settings = AppHelper::getSettings([
             'moyasar_running_environment',
             'moyasar_api_test_secret_key',
             'moyasar_api_test_publishable_key',
