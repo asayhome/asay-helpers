@@ -11,7 +11,7 @@ class AsayUsersLogs extends Model
     use HasFactory, SoftDeletes;
 
     public $fillable = [
-        'user_by',
+        'user_id',
         'operation',
         'device_type',
         'os_type',
