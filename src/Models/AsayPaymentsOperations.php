@@ -28,11 +28,11 @@ class AsayPaymentsOperations extends Model
     ];
 
 
-
     public function owner()
     {
         return $this->hasOne(UserModel::class, 'id', 'user_id')->withTrashed();
     }
+
     public function creator()
     {
         return $this->hasOne(UserModel::class, 'id', 'created_by')->withTrashed();

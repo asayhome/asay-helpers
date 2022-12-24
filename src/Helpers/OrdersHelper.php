@@ -14,11 +14,11 @@ class OrdersHelper
         $order_tax,
         $order_provider_percentage,
         $order_application_percentage
-    ) {
+    )
+    {
 
 
         $reason = PaymentsHelper::$accepting_reason;
-
 
 
         $details = [];
@@ -32,7 +32,7 @@ class OrdersHelper
 
         $provider_app_percentage = 100 / ($order_provider_percentage + $order_application_percentage);
         $provider_percentage = $provider_app_percentage * ($order_provider_percentage / 100);
-        $application_percentage = $provider_app_percentage * ($order_application_percentage  / 100);
+        $application_percentage = $provider_app_percentage * ($order_application_percentage / 100);
         $details['provider_app_amount'] = [
             'order_provider_percentage' => $order_provider_percentage,
             'order_application_percentage' => $order_application_percentage,
@@ -111,7 +111,7 @@ class OrdersHelper
             ->get();
         if ($others_payments) {
             foreach ($others_payments as $payment) {
-                $details['remaining_amount'] -=  round(floatval($payment->amount));
+                $details['remaining_amount'] -= round(floatval($payment->amount));
                 $details['other_payments'][] = [
                     'gateway' => $payment->gateway,
                     'payment_amount' => round(floatval($payment->amount)),

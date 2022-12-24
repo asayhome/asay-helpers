@@ -3,7 +3,6 @@
 namespace AsayHome\AsayHelpers\Helpers;
 
 use App\Models\Coupons;
-use App\Models\Orders;
 use AsayHome\AsayHelpers\Models\AsayPaymentsOperations;
 
 class CouponsHelper
@@ -100,8 +99,8 @@ class CouponsHelper
          */
         $ids = [];
         foreach (Coupons::where('publish', true)
-            ->where('from_date', '<=', \Carbon\Carbon::now()->toDateString())
-            ->where('to_date', '>=', \Carbon\Carbon::now()->toDateString())->cursor() as $coupon) {
+                     ->where('from_date', '<=', \Carbon\Carbon::now()->toDateString())
+                     ->where('to_date', '>=', \Carbon\Carbon::now()->toDateString())->cursor() as $coupon) {
             $users = [];
             if (is_array($coupon->users)) {
                 $users = $coupon->users;

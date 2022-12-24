@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class UserModel extends Model implements Wallet, WalletFloat
 {
-    use HasFactory, SoftDeletes,  HasWalletFloat;
+    use HasFactory, SoftDeletes, HasWalletFloat;
 
     public $table = 'users';
 

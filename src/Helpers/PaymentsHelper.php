@@ -88,7 +88,6 @@ class PaymentsHelper
     }
 
 
-
     public function toArray(): array
     {
         return get_object_vars($this);
@@ -125,7 +124,8 @@ class PaymentsHelper
         $payment_status,
         $created_by,
         $details
-    ) {
+    )
+    {
         WalletHelper::deposit($user_id, $amount, [
             'balance' => $amount,
             'description' => $description,
@@ -164,7 +164,8 @@ class PaymentsHelper
         $operation_id,
         $created_by,
         $details
-    ) {
+    )
+    {
         // (1): important: register the payment firstly
         AsayPaymentsOperations::create([
             'user_id' => $user_id,
@@ -194,7 +195,8 @@ class PaymentsHelper
         $payment_reference,
         $payment_status,
         $details
-    ) {
+    )
+    {
         $security_deposit = $amount;
         if ($user->security_deposit) {
             $security_deposit += $user->security_deposit;
@@ -262,7 +264,8 @@ class PaymentsHelper
         $add_note_to_alert,
         $description,
         $alert_drivers
-    ) {
+    )
+    {
         if ($send_user_alert == 1) {
             // $notify = new NotificationHelper('general', $user_id);
             // $notify->template = 'general';

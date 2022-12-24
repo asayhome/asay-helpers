@@ -27,6 +27,7 @@ class CreateAsayPaymentsOperationsTable extends Migration
             $table->timestamps();
         });
     }
+
     public function down()
     {
         Schema::dropIfExists('asay_payments_operations');

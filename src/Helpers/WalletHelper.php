@@ -92,7 +92,8 @@ class WalletHelper
         $meta,
         $from_user_wallet = null,
         $to_user_wallet = null
-    ) {
+    )
+    {
         if (!is_array($meta)) {
             $meta = [
                 'description' => $meta,
@@ -135,8 +136,8 @@ class WalletHelper
     public static function addWithdrawOperation($user_id, $order_id, $operation, $reason, $amount, $notes = '')
     {
         if ($amount > 0) {
-            WalletHelper::withdraw($user_id,  $amount, [
-                'balance' =>  $amount,
+            WalletHelper::withdraw($user_id, $amount, [
+                'balance' => $amount,
                 'description' => 'Wallet withdraw operation',
                 'created_by' => auth()->check() ? auth()->user()->id : $user_id,
                 'timestamp' => date('Y-m-d H:i:s', time()),

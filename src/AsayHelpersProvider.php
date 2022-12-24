@@ -17,6 +17,7 @@ class AsayHelpersProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__ . '/../resources/views', 'asay-helpers');
         $this->loadMigrationsFrom(__DIR__ . '/../resources/database/migrations', 'asay-helpers');
     }
+
     public function register()
     {
         $this->mergeConfigFrom(

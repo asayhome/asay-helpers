@@ -13,6 +13,7 @@ class TimestampHelper
         $date->setTimezone($userTimeZone);
         return $date;
     }
+
     public static function getRemainingTime($timestamp, $from = 'now')
     {
         if ($from == 'now') {
