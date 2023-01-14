@@ -14,13 +14,4 @@ class UserModel extends Model implements Wallet, WalletFloat
     use HasFactory, SoftDeletes, HasWalletFloat;
 
     public $table = 'users';
-
-    public function getNameAttribute($value)
-    {
-        if (isset($this->first_name) && isset($this->last_name)) {
-            return $this->first_name . ' ' . $this->last_name;
-        } else {
-            return $value;
-        }
-    }
 }
