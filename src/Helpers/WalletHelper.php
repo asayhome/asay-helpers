@@ -2,8 +2,8 @@
 
 namespace AsayHome\AsayHelpers\Helpers;
 
-use AsayHome\AsayHelpers\Models\AsayPaymentsOperations;
 use AsayHome\AsayHelpers\Models\UserModel;
+use Tik\AppSettings\Models\PaymentsOperations;
 
 class WalletHelper
 {
@@ -92,8 +92,7 @@ class WalletHelper
         $meta,
         $from_user_wallet = null,
         $to_user_wallet = null
-    )
-    {
+    ) {
         if (!is_array($meta)) {
             $meta = [
                 'description' => $meta,
@@ -116,7 +115,7 @@ class WalletHelper
     public static function addDepositOperation($user_id, $order_id, $operation, $reason, $amount, $notes = '')
     {
         if ($amount > 0) {
-            AsayPaymentsOperations::create([
+            PaymentsOperations::create([
                 'user_id' => $user_id,
                 'created_by' => auth()->check() ? auth()->user()->id : $user_id,
                 'order_id' => $order_id,
@@ -143,7 +142,7 @@ class WalletHelper
                 'timestamp' => date('Y-m-d H:i:s', time()),
             ]);
 
-            AsayPaymentsOperations::create([
+            PaymentsOperations::create([
                 'user_id' => $user_id,
                 'created_by' => auth()->check() ? auth()->user()->id : $user_id,
                 'order_id' => $order_id,
